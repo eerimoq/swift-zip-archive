@@ -180,4 +180,29 @@ struct ZipArchiveReaderTests {
         }
         #expect(Set(files) == Set(["Temp/Hello/Hello.txt", "Temp/Hello", "Temp/World/World.txt", "Temp/World"]))
     }
+
+    @Test(arguments: ["../escaped.txt", "Hello/../../escaped.txt", "/escaped.txt"])
+    func extractRejectsPathsOutsideRootFolder(filename: String) throws {
+        let writer = ZipArchiveWriter()
+        try writer.writeFile(filename: "Hello/Hello.txt", contents: .init("Hello,".utf8))
+        try writer.writeFile(filename: filename, contents: .init("world!".utf8))
+        let buffer = try writer.finalizeBuffer()
+        let reader = try ZipArchiveReader(buffer: buffer)
+        // Test cases run in parallel, so each needs its own folder
+        let folder = FilePath("Temp-\(UUID().uuidString)")
+        let rootFolder = folder.appending("Root")
+        try DirectoryDescriptor.mkdir(folder, options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
+        try DirectoryDescriptor.mkdir(rootFolder, options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
+        defer {
+            try? DirectoryDescriptor.recursiveDelete(folder)
+        }
+        #expect(throws: ZipArchiveReaderError.invalidFilePath) {
+            try reader.extract(to: rootFolder)
+        }
+        var files: [FilePath] = []
+        try DirectoryDescriptor.recursiveForFilesInDirectory(folder) { filePath in
+            files.append(filePath)
+        }
+        #expect(files == [rootFolder])
+    }
 }

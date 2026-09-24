@@ -480,6 +480,7 @@ public struct ZipArchiveReaderError: Error, Equatable {
         case failedToReadFromBuffer
         case crc32FileValidationFailed
         case encryptedFilesRequirePassword
+        case invalidFilePath
     }
     internal let value: Value
 
@@ -500,4 +501,6 @@ public struct ZipArchiveReaderError: Error, Equatable {
     public static var crc32FileValidationFailed: Self { .init(value: .crc32FileValidationFailed) }
     /// File is encrypted and requires a password
     public static var encryptedFilesRequirePassword: Self { .init(value: .encryptedFilesRequirePassword) }
+    /// File path is absolute or contains ".." components, and would be extracted outside of the root folder
+    public static var invalidFilePath: Self { .init(value: .invalidFilePath) }
 }

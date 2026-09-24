@@ -13,9 +13,18 @@ extension ZipArchiveReader {
     /// - Parameters:
     ///   - rootFolder: Root folder to extract into
     ///   - password: Password to use when decrypting files
-    /// - Throws:
+    /// - Throws: ``ZipArchiveReaderError/invalidFilePath`` if any entry would be extracted
+    ///     outside of `rootFolder`. In that case nothing is extracted.
     public func extract(to rootFolder: FilePath, password: String? = nil) throws {
         let directory = try self.readDirectory()
+        // Validate all entries before writing anything to avoid extracting outside the root folder
+        for entry in directory {
+            guard entry.filename.root == nil,
+                !entry.filename.components.contains(where: { $0.kind == .parentDirectory })
+            else {
+                throw ZipArchiveReaderError.invalidFilePath
+            }
+        }
         for entry in directory {
             let fullFilePath = rootFolder.appending(entry.filename.components)
             // Is either unix or msdos directory flag set
